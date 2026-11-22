@@ -106,7 +106,7 @@
 
                 const rol = (data.rol || '').toUpperCase();
                 if (rol !== 'CLIENTE') {
-                    throw new Error('Esta cuenta no tiene acceso al panel de control de clientes. Contacta al administrador.');
+                    throw new Error('Cuenta no registrada. Contacta al administrador.');
                 }
 
                 btnText.textContent = 'Acceso concedido';
