@@ -101,12 +101,12 @@
 
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok || !data.id || !data.token) {
-                    throw new Error(data.mensaje || data.username || 'Credenciales inválidas.');
+                    throw new Error(data.mensaje || data.username || 'Credenciales inválidas');
                 }
 
                 const rol = (data.rol || '').toUpperCase();
                 if (rol !== 'CLIENTE') {
-                    throw new Error(data.mensaje || data.username || 'Credenciales inválidas.');
+                    throw new Error('Credenciales inválidas');
                 }
 
                 btnText.textContent = 'Acceso concedido';
