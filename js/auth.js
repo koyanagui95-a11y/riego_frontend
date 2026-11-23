@@ -51,7 +51,7 @@
 
         const errorParam = new URLSearchParams(window.location.search).get('error');
         if (errorParam === 'no_cliente') {
-            showAlert('Esta cuenta no tiene acceso al panel de control de clientes. Contacta al administrador.', 'warning');
+            showAlert('Contacté al administrador.', 'warning');
             window.history.replaceState({}, document.title, 'login.html');
         }
 
@@ -106,7 +106,7 @@
 
                 const rol = (data.rol || '').toUpperCase();
                 if (rol !== 'CLIENTE') {
-                    throw new Error('Cuenta no registrada. Contacta al administrador.');
+                    throw new Error(data.mensaje || data.username || 'Credenciales inválidas.');
                 }
 
                 btnText.textContent = 'Acceso concedido';
