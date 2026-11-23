@@ -51,7 +51,7 @@
 
         const errorParam = new URLSearchParams(window.location.search).get('error');
         if (errorParam === 'no_cliente') {
-            showAlert('Contacté al administrador.', 'warning');
+            showAlert('Credenciales inválidas.', 'danger');
             window.history.replaceState({}, document.title, 'login.html');
         }
 
@@ -101,12 +101,12 @@
 
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok || !data.id || !data.token) {
-                    throw new Error(data.mensaje || data.username || 'Credenciales inválidas');
+                    throw new Error(data.mensaje || data.username || 'Credenciales inválidas.');
                 }
 
                 const rol = (data.rol || '').toUpperCase();
                 if (rol !== 'CLIENTE') {
-                    throw new Error('Credenciales inválidas');
+                    throw new Error('Credenciales inválidas.');
                 }
 
                 btnText.textContent = 'Acceso concedido';
