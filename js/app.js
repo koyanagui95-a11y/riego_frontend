@@ -59,12 +59,15 @@
     let humedadChart = null;
     let todasLasLecturas = [];
     let esp32Online = false;
+    let estadoOnlineVerificado = false;
     let sensores = [];
     let tanqueBajo = false;
     let detallesAbierto = false;
     let tablaAbierta = false;
 
     const $ = (id) => document.getElementById(id);
+    const CONFIG_CACHE_KEY = `riego_config_${usuarioId}`;
+    const ESTADO_CACHE_KEY = `riego_estado_${usuarioId}`;
 
     const hoy = new Date();
     const filtroMesEl = $('filtroMes');
@@ -86,6 +89,12 @@
         }
     }
 
+    function aplicarFiltroFechaYRenderizar() {
+        const lecturasDia = obtenerLecturasDelDiaSeleccionado();
+        renderizarGrafico(lecturasDia);
+        renderizarDetallesDelDia(lecturasDia);
+    }
+
     if (filtroMesEl) {
         filtroMesEl.value = String(hoy.getMonth());
         poblarDiasDelMes(hoy.getMonth(), hoy.getDate());
@@ -94,13 +103,17 @@
             const mes = parseInt(filtroMesEl.value, 10);
             const diaActual = parseInt(filtroDiaEl.value || String(hoy.getDate()), 10);
             poblarDiasDelMes(mes, diaActual);
-            renderizarDetallesDelDia();
+            aplicFiltroFechaYRenderizar();
         });
+    }
+
+    function aplicFiltroFechaYRenderizar() {
+        aplicarFiltroFechaYRenderizar();
     }
 
     if (filtroDiaEl) {
         filtroDiaEl.addEventListener('change', () => {
-            renderizarDetallesDelDia();
+            aplicarFiltroFechaYRenderizar();
         });
     }
 
@@ -142,12 +155,41 @@
         return res;
     }
 
+    function leerCacheJson(clave) {
+        try {
+            const raw = localStorage.getItem(clave);
+            return raw ? JSON.parse(raw) : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function guardarCacheJson(clave, valor) {
+        try {
+            localStorage.setItem(clave, JSON.stringify(valor));
+        } catch (_) {}
+    }
+
     async function cargarConfiguracion() {
+        const cached = leerCacheJson(CONFIG_CACHE_KEY);
+        if (cached && Array.isArray(cached.sensores) && cached.sensores.length > 0) {
+            sensores = cached.sensores;
+            renderizarTodo();
+            const ultimoEstado = leerCacheJson(ESTADO_CACHE_KEY);
+            if (ultimoEstado && !ultimoEstado.mensaje) {
+                renderizarCardValores(ultimoEstado);
+                if (ultimoEstado.fechaRegistro && $('fecha-val')) {
+                    $('fecha-val').innerText = new Date(ultimoEstado.fechaRegistro).toLocaleString('es-PE');
+                }
+            }
+        }
+
         try {
             const res = await safeFetch(`${CONFIG.API_URL}/v1/config/${usuarioId}`);
             if (res.ok) {
                 const data = await res.json();
                 sensores = data.sensores || [];
+                guardarCacheJson(CONFIG_CACHE_KEY, { sensores });
             }
         } catch (err) {
             console.error('No se pudo cargar config:', err);
@@ -159,8 +201,7 @@
         renderizarCards();
         renderizarTablaHeader();
         if (todasLasLecturas.length > 0) {
-            renderizarGraficoHoy();
-            renderizarDetallesDelDia();
+            aplicarFiltroFechaYRenderizar();
         }
     }
 
@@ -233,6 +274,7 @@
             const data = await res.json();
 
             esp32Online = !!data.online;
+            estadoOnlineVerificado = true;
             bombaManual = !!data.bombaManual;
 
             const sensorTanque = sensores.find(s => s.tipo === 'tanque');
@@ -260,6 +302,7 @@
         } catch (err) {
             console.error(err);
             esp32Online = false;
+            estadoOnlineVerificado = true;
             renderizarEsp32Offline();
         }
     }
@@ -322,21 +365,13 @@
         const banner = $('esp32-offline-banner');
         if (banner) banner.classList.remove('d-none');
 
-        sensores.filter(s => s.habilitado && s.tipo !== 'bomba').forEach(s => {
-            const el = $('val-' + s.tipo);
-            if (el) el.innerText = '---';
-            const bar = $('bar-' + s.tipo);
-            if (bar) bar.style.width = '0%';
-        });
-
-        if ($('fecha-val')) $('fecha-val').innerText = '---';
-
         const badge = $('bomba-status');
+        const texto = $('bomba-texto');
         if (badge) {
             badge.className = 'badge rounded-pill bg-danger px-4 py-2 fs-5';
             badge.innerHTML = '<i class="bi bi-wifi-off me-1"></i> SIN CONEXIÓN';
         }
-        if ($('bomba-texto')) $('bomba-texto').innerText = 'ESP32 apagado o sin conexión a internet.';
+        if (texto) texto.innerText = 'ESP32 apagado o sin conexión a internet.';
 
         const boton = $('btnBombaManual');
         const estado = $('estadoManual');
@@ -350,34 +385,35 @@
     }
 
     async function obtenerEstado() {
-        if (!esp32Online) return;
         try {
             const res = await safeFetch(`${CONFIG.API_URL}/v1/lecturas/estado/${usuarioId}`);
             const data = res.ok ? await res.json() : null;
 
             if (!data || data.mensaje) {
-                sensores.filter(s => s.habilitado && s.tipo !== 'bomba').forEach(s => {
-                    const el = $('val-' + s.tipo);
-                    if (el) el.innerText = '---';
-                });
+                if (todasLasLecturas.length > 0) {
+                    renderizarCardValores(todasLasLecturas[0]);
+                }
                 return;
             }
 
+            guardarCacheJson(ESTADO_CACHE_KEY, data);
             renderizarCardValores(data);
 
             const badge = $('bomba-status');
             const texto = $('bomba-texto');
-            if (data.bombaActiva) {
-                badge.className = 'badge rounded-pill bg-success px-4 py-2 fs-5';
-                badge.innerHTML = '<i class="bi bi-water me-1"></i> ENCENDIDA';
-                texto.innerText = 'Bomba activada.';
-            } else {
-                badge.className = 'badge rounded-pill bg-secondary px-4 py-2 fs-5';
-                badge.innerHTML = '<i class="bi bi-power me-1"></i> APAGADA';
-                texto.innerText = 'Sistema en espera.';
+            if (badge && texto && (!estadoOnlineVerificado || esp32Online)) {
+                if (data.bombaActiva) {
+                    badge.className = 'badge rounded-pill bg-success px-4 py-2 fs-5';
+                    badge.innerHTML = '<i class="bi bi-water me-1"></i> ENCENDIDA';
+                    texto.innerText = 'Bomba activada.';
+                } else {
+                    badge.className = 'badge rounded-pill bg-secondary px-4 py-2 fs-5';
+                    badge.innerHTML = '<i class="bi bi-power me-1"></i> APAGADA';
+                    texto.innerText = 'Sistema en espera.';
+                }
             }
 
-            if (data.fechaRegistro) {
+            if (data.fechaRegistro && $('fecha-val')) {
                 $('fecha-val').innerText = new Date(data.fechaRegistro).toLocaleString('es-PE');
             }
         } catch (err) {
@@ -387,40 +423,66 @@
 
     async function obtenerLecturasHistoricas() {
         try {
-            const res = await safeFetch(
-                `${CONFIG.API_URL}/v1/lecturas/usuario/${usuarioId}?page=0&size=1000&sort=fechaRegistro,desc`
-            );
-            if (!res.ok) throw new Error(`HTTP ${res.status} al obtener las lecturas`);
-            const page = await res.json();
-            todasLasLecturas = Array.isArray(page) ? page : (page.content || []);
-            renderizarGraficoHoy();
-            renderizarDetallesDelDia();
+            const size = 1000;
+            let page = 0;
+            let totalPages = 1;
+            const acumuladas = [];
+
+            while (page < totalPages) {
+                const res = await safeFetch(
+                    `${CONFIG.API_URL}/v1/lecturas/usuario/${usuarioId}?page=${page}&size=${size}&sort=fechaRegistro,desc`
+                );
+                if (!res.ok) throw new Error(`HTTP ${res.status} al obtener las lecturas`);
+                const data = await res.json();
+
+                if (Array.isArray(data)) {
+                    acumuladas.push(...data);
+                    break;
+                }
+
+                const items = Array.isArray(data.content) ? data.content : [];
+                acumuladas.push(...items);
+                totalPages = typeof data.totalPages === 'number' && data.totalPages > 0 ? data.totalPages : 1;
+                page += 1;
+            }
+
+            todasLasLecturas = acumuladas;
+            if (todasLasLecturas.length > 0 && !leerCacheJson(ESTADO_CACHE_KEY)) {
+                renderizarCardValores(todasLasLecturas[0]);
+                if (todasLasLecturas[0].fechaRegistro && $('fecha-val')) {
+                    $('fecha-val').innerText = new Date(todasLasLecturas[0].fechaRegistro).toLocaleString('es-PE');
+                }
+            }
+            aplicarFiltroFechaYRenderizar();
         } catch (err) {
             console.error('Error cargando historial:', err);
         }
     }
 
-    function renderizarGraficoHoy() {
-        const ahora = new Date();
-        const lecturasHoy = todasLasLecturas
+    function obtenerLecturasDelDiaSeleccionado() {
+        const mesSeleccionado = parseInt(filtroMesEl ? filtroMesEl.value : String(hoy.getMonth()), 10);
+        const diaSeleccionado = parseInt(filtroDiaEl ? filtroDiaEl.value : String(hoy.getDate()), 10);
+
+        return todasLasLecturas
             .filter(l => {
                 if (!l.fechaRegistro) return false;
                 const f = new Date(l.fechaRegistro);
-                return f.getFullYear() === ahora.getFullYear() &&
-                    f.getMonth() === ahora.getMonth() &&
-                    f.getDate() === ahora.getDate();
+                return f.getMonth() === mesSeleccionado && f.getDate() === diaSeleccionado;
             })
             .sort((a, b) => new Date(a.fechaRegistro) - new Date(b.fechaRegistro));
+    }
 
+    function renderizarGrafico(lecturasFiltradas) {
+        const lista = Array.isArray(lecturasFiltradas) ? lecturasFiltradas : [];
         const wrapper = $('graficoInnerWrapper');
         const scrollContainer = $('graficoScrollContainer');
         if (wrapper) {
             const anchoPorPunto = 64;
-            const anchoCalculado = Math.max(600, lecturasHoy.length * anchoPorPunto);
-            wrapper.style.width = lecturasHoy.length > 10 ? `${anchoCalculado}px` : '100%';
+            const anchoCalculado = Math.max(600, lista.length * anchoPorPunto);
+            wrapper.style.width = lista.length > 10 ? `${anchoCalculado}px` : '100%';
         }
 
-        const etiquetas = lecturasHoy.map(l => {
+        const etiquetas = lista.map(l => {
             const f = new Date(l.fechaRegistro);
             return f.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
         });
@@ -431,7 +493,7 @@
         sensores
             .filter(s => s.habilitado && s.tipoValor === 'numero' && s.tipo !== 'bomba')
             .forEach(s => {
-                const valores = lecturasHoy.map(l => {
+                const valores = lista.map(l => {
                     const raw = s.campo.startsWith('extras.')
                         ? getCampo(l.extras || {}, s.campo.substring(7))
                         : getCampo(l, s.campo);
@@ -454,6 +516,16 @@
         if (!ctx) return;
         if (humedadChart) humedadChart.destroy();
 
+        const mesTexto = filtroMesEl && filtroMesEl.options[filtroMesEl.selectedIndex]
+            ? filtroMesEl.options[filtroMesEl.selectedIndex].text
+            : '';
+        const diaTexto = filtroDiaEl ? filtroDiaEl.value : '';
+        const esHoy =
+            filtroMesEl &&
+            filtroDiaEl &&
+            parseInt(filtroMesEl.value, 10) === hoy.getMonth() &&
+            parseInt(filtroDiaEl.value, 10) === hoy.getDate();
+
         humedadChart = new Chart(ctx, {
             type: 'line',
             data: { labels: etiquetas, datasets },
@@ -463,7 +535,12 @@
                 interaction: { intersect: false, mode: 'index' },
                 scales: {
                     y: { beginAtZero: true, title: { display: true, text: 'Valores' } },
-                    x: { title: { display: true, text: 'Hora (Hoy)' } }
+                    x: {
+                        title: {
+                            display: true,
+                            text: esHoy ? 'Hora (Hoy)' : `Hora (${diaTexto} de ${mesTexto})`
+                        }
+                    }
                 },
                 plugins: { legend: { display: true } }
             }
@@ -474,22 +551,11 @@
         }
     }
 
-    function obtenerLecturasDelDiaSeleccionado() {
-        const mesSeleccionado = parseInt(filtroMesEl ? filtroMesEl.value : String(hoy.getMonth()), 10);
-        const diaSeleccionado = parseInt(filtroDiaEl ? filtroDiaEl.value : String(hoy.getDate()), 10);
-
-        return todasLasLecturas
-            .filter(l => {
-                if (!l.fechaRegistro) return false;
-                const f = new Date(l.fechaRegistro);
-                return f.getMonth() === mesSeleccionado && f.getDate() === diaSeleccionado;
-            })
-            .sort((a, b) => new Date(a.fechaRegistro) - new Date(b.fechaRegistro));
-    }
-
-    function renderizarDetallesDelDia() {
-        const lecturasDia = obtenerLecturasDelDiaSeleccionado();
-        const mesTexto = filtroMesEl ? filtroMesEl.options[filtroMesEl.selectedIndex].text : '';
+    function renderizarDetallesDelDia(lecturasParam) {
+        const lecturasDia = Array.isArray(lecturasParam) ? lecturasParam : obtenerLecturasDelDiaSeleccionado();
+        const mesTexto = filtroMesEl && filtroMesEl.options[filtroMesEl.selectedIndex]
+            ? filtroMesEl.options[filtroMesEl.selectedIndex].text
+            : '';
         const diaTexto = filtroDiaEl ? filtroDiaEl.value : '';
 
         const resumenFechaEl = $('resumenFechaTexto');
@@ -622,7 +688,7 @@
                 : '<i class="bi bi-sliders2 me-1"></i>Ver detalles';
 
             if (detallesAbierto) {
-                renderizarDetallesDelDia();
+                aplicarFiltroFechaYRenderizar();
             }
         });
     }
@@ -775,9 +841,11 @@
     }
 
     cargarConfiguracion().then(() => {
-        obtenerEstadoManual();
-        obtenerEstado();
-        obtenerLecturasHistoricas();
+        Promise.allSettled([
+            obtenerEstado(),
+            obtenerLecturasHistoricas(),
+            obtenerEstadoManual()
+        ]);
     });
 
     setInterval(obtenerEstadoManual, CONFIG.POLL_ESTADO_MS);
