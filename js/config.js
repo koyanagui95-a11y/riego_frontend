@@ -6,6 +6,6 @@ const CONFIG = {
         }
         return 'https://riego-back-kzob.onrender.com/api';
     })(),
-    POLL_ESTADO_MS: 10000,
-    POLL_LECTURAS_MS: 10000,
+    POLL_ESTADO_MS: 600000,
+    POLL_LECTURAS_MS: 600000,
 };
