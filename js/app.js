@@ -271,7 +271,7 @@
             obtenerLecturasHistoricas();
             if (seVaAEncender && bombaManual) {
                 mostrarNotificacion('Bomba encendida. Verificando flujo de agua...', 'info');
-                setTimeout(verificarFlujoTrasEncendido, 6000);
+                setTimeout(verificarFlujoTrasEncendido, 10000);
             }
         } catch (err) {
             console.error(err);
@@ -568,8 +568,8 @@
         obtenerLecturasHistoricas();
     });
 
-    setInterval(obtenerEstadoManual, CONFIG.POLL_ESTADO_MS || 5000);
-    setInterval(obtenerEstado, CONFIG.POLL_ESTADO_MS || 5000);
+    setInterval(obtenerEstadoManual, CONFIG.POLL_ESTADO_MS || 2000);
+    setInterval(obtenerEstado, CONFIG.POLL_ESTADO_MS || 2000);
     setInterval(obtenerLecturasHistoricas, CONFIG.POLL_LECTURAS_MS || 10000);
 
     const btnConfigWifi = $('btnConfigWifi');
