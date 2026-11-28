@@ -31,28 +31,54 @@
     font-size: 0.9rem;
 }
 
+#graficoScrollContainer {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
 #humedadChart {
     display: block;
     width: 100% !important;
     height: 100% !important;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
 }
 
 @media (max-width: 576px) {
+    .container {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
     #cards-container .card {
         padding: 0.85rem !important;
+        border-radius: 1rem !important;
     }
 
     #cards-container h2,
     #cards-container .display-6,
     #cards-container .fs-2 {
-        font-size: 1.55rem !important;
+        font-size: 1.5rem !important;
     }
 
     #cards-container h6,
     #cards-container .card-title {
-        font-size: 0.78rem !important;
+        font-size: 0.74rem !important;
+        letter-spacing: 0.02em;
         margin-bottom: 0.35rem !important;
+    }
+
+    #graficoInnerWrapper {
+        height: 230px !important;
+    }
+
+    #filtroMes,
+    #filtroDia {
+        font-size: 0.8rem !important;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+    }
+
+    #btnVerDetalles {
+        font-size: 0.8rem !important;
+        padding: 0.28rem 0.6rem;
     }
 }
