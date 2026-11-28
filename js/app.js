@@ -231,7 +231,7 @@
             .filter(s => s.habilitado && s.tipo !== 'bomba')
             .forEach(s => {
                 const card = document.createElement('div');
-                card.className = 'col-md-3';
+                card.className = 'col-6 col-md-3';
                 card.setAttribute('data-sensor', s.tipo);
                 card.innerHTML = `
                     <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100">
@@ -585,15 +585,17 @@
         const ctx = $('humedadChart');
         if (!ctx) return;
 
-        const maxPuntosConScroll = 140;
+        const esMovil = window.innerWidth <= 576;
+        const maxPuntosConScroll = esMovil ? 90 : 140;
         const lecturasGrafico = lecturas.length > maxPuntosConScroll
             ? lecturas.slice(-maxPuntosConScroll)
             : lecturas;
 
         if (wrapper) {
-            const anchoPorPunto = 52;
-            const anchoCalculado = Math.min(5400, Math.max(640, lecturasGrafico.length * anchoPorPunto));
-            wrapper.style.width = lecturasGrafico.length > 10 ? `${anchoCalculado}px` : '100%';
+            const anchoPorPunto = esMovil ? 44 : 52;
+            const anchoMinimo = esMovil ? 480 : 640;
+            const anchoCalculado = Math.min(5400, Math.max(anchoMinimo, lecturasGrafico.length * anchoPorPunto));
+            wrapper.style.width = lecturasGrafico.length > 8 ? `${anchoCalculado}px` : '100%';
         }
 
         const etiquetas = lecturasGrafico.map(l => {
@@ -609,7 +611,7 @@
             warning: '#ffc107'
         };
 
-        const radioPunto = lecturasGrafico.length > 80 ? 1.8 : 2.4;
+        const radioPunto = lecturasGrafico.length > 80 ? 1.8 : (esMovil ? 2.2 : 2.5);
 
         const datasets = sensores
             .filter(s => s.habilitado && s.tipoValor === 'numero' && s.tipo !== 'bomba')
@@ -622,7 +624,7 @@
                     tension: 0.25,
                     borderColor: color,
                     backgroundColor: color,
-                    borderWidth: 2,
+                    borderWidth: esMovil ? 2.2 : 2,
                     borderCapStyle: 'round',
                     borderJoinStyle: 'round',
                     pointRadius: radioPunto,
@@ -639,7 +641,7 @@
             humedadChart = null;
         }
 
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const dpr = Math.min(window.devicePixelRatio || 1, 3);
 
         humedadChart = new Chart(ctx, {
             type: 'line',
@@ -648,24 +650,26 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 devicePixelRatio: dpr,
-                animation: {
-                    duration: 180
-                },
+                animation: false,
                 interaction: { intersect: false, mode: 'index' },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        title: { display: true, text: 'Valores' },
-                        grid: { color: 'rgba(0, 0, 0, 0.06)' }
-                    },
-                    x: {
-                        title: { display: true, text: 'Hora' },
+                        title: { display: !esMovil, text: 'Valores' },
                         grid: { color: 'rgba(0, 0, 0, 0.06)' },
                         ticks: {
-                            maxRotation: 35,
+                            font: { size: esMovil ? 10 : 12 }
+                        }
+                    },
+                    x: {
+                        title: { display: !esMovil, text: 'Hora' },
+                        grid: { color: 'rgba(0, 0, 0, 0.06)' },
+                        ticks: {
+                            maxRotation: esMovil ? 45 : 35,
                             minRotation: 0,
                             autoSkip: true,
-                            maxTicksLimit: 24
+                            maxTicksLimit: esMovil ? 12 : 24,
+                            font: { size: esMovil ? 10 : 12 }
                         }
                     }
                 },
@@ -674,8 +678,15 @@
                         display: true,
                         labels: {
                             usePointStyle: true,
-                            boxWidth: 8
+                            boxWidth: 8,
+                            font: { size: esMovil ? 11 : 12 }
                         }
+                    },
+                    tooltip: {
+                        padding: esMovil ? 8 : 10,
+                        titleFont: { size: esMovil ? 11 : 12 },
+                        bodyFont: { size: esMovil ? 11 : 12 },
+                        boxWidth: 10
                     }
                 }
             }
