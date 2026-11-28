@@ -1,0 +1,30 @@
+body.auth-bg {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #198754 0%, #0d6efd 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.auth-wrapper {
+    width: 100%;
+    max-width: 440px;
+}
+
+.auth-card {
+    background: #ffffff;
+}
+
+.auth-card .form-control:focus {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.15);
+}
+
+.auth-card a {
+    color: #198754;
+}
+
+.auth-card a:hover {
+    color: #146c43;
+}
