@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riego Inteligente</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#198754">
+    <link rel="apple-touch-icon" href="icono-riego-inteligente.png">
+</head>
+
+<body class="bg-light">
+
+    <nav class="navbar navbar-dark bg-success shadow-sm py-2">
+        <div class="container d-flex justify-content-between align-items-center flex-nowrap">
+            <a class="navbar-brand fw-bold d-flex align-items-center mb-0 fs-6 fs-md-5 text-truncate" href="#">
+                <i class="bi bi-flower1 me-2 fs-5"></i>Riego Inteligente
+            </a>
+
+            <div class="d-flex align-items-center gap-2">
+                <button id="btnInstallPwa" class="btn btn-warning btn-sm d-none px-2 py-1" title="Instalar aplicación">
+                    <i class="bi bi-download"></i><span class="d-none d-sm-inline ms-1">Instalar</span>
+                </button>
+
+                <div class="dropdown">
+                    <button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center gap-1"
+                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-person-circle"></i>
+                        <span id="usuario-actual" class="text-truncate" style="max-width: 110px;">Usuario</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 mt-2">
+                        <li>
+                            <button type="button" class="dropdown-item py-2" data-bs-toggle="modal"
+                                data-bs-target="#wifiModal">
+                                <i class="bi bi-router text-success me-2"></i>Configurar WiFi
+                            </button>
+                        </li>
+                        <li>
+                            <a href="change-password.html" class="dropdown-item py-2">
+                                <i class="bi bi-key text-primary me-2"></i>Cambiar contraseña
+                            </a>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider my-1">
+                        </li>
+                        <li>
+                            <button type="button" class="dropdown-item py-2 text-danger fw-semibold" id="btnLogout">
+                                <i class="bi bi-box-arrow-right me-2"></i>Salir
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090;">
+        <div id="appToast" class="toast align-items-center border-0 shadow" role="alert" aria-live="assertive"
+            aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body fw-semibold" id="appToastBody"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                    aria-label="Cerrar"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-3 py-md-4">
+
+        <div id="servicio-suspendido-banner" class="alert alert-danger d-none rounded-4 shadow-sm mb-3" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-slash-circle-fill fs-3 me-3"></i>
+                <div>
+                    <h6 class="fw-bold mb-1">Servicio suspendido</h6>
+                    <p class="mb-0 small">El riego automático y manual están detenidos. Comunícate con administración
+                        para regularizar tu servicio.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="esp32-offline-banner" class="alert alert-danger d-none rounded-4 shadow-sm mb-3" role="alert">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-wifi-off fs-3 me-3"></i>
+                    <div>
+                        <h6 class="fw-bold mb-1">Dispositivo sin conexión a internet</h6>
+                        <p class="mb-0 small">El equipo de riego está desconectado o sin energía. Se muestran los
+                            últimos datos registrados.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger bg-white fw-semibold" id="btnConfigWifi">
+                    <i class="bi bi-router me-1"></i>Cambiar red WiFi
+                </button>
+            </div>
+        </div>
+
+        <div id="flujo-alerta-banner" class="alert alert-warning d-none rounded-4 shadow-sm mb-3" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
+                <div>
+                    <h6 class="fw-bold mb-1">Alerta de flujo de agua</h6>
+                    <p class="mb-0 small">El riego se detuvo porque no se detectó salida de agua. Verifica la energía o
+                        si hay aire en la tubería.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mb-3">
+            <h4 class="fw-bold text-success mb-1">
+                <i class="bi bi-speedometer2 me-2"></i>Monitoreo en tiempo real
+            </h4>
+            <p class="text-muted small mb-0">
+                Última actualización: <span id="fecha-val" class="fw-semibold">Cargando...</span>
+            </p>
+        </div>
+
+        <div class="row g-2 g-md-3 mb-3 mb-md-4 justify-content-center" id="cards-container"></div>
+
+        <div class="row g-2 g-md-3 mb-3 mb-md-4 justify-content-center">
+            <div class="col-12 col-md-5">
+                <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 text-center h-100">
+                    <h6 class="text-muted fw-semibold mb-2 small">ESTADO DE RIEGO</h6>
+                    <div class="my-auto">
+                        <span id="bomba-status" class="badge rounded-pill bg-secondary px-4 py-2 fs-6">
+                            <i class="bi bi-power me-1"></i> APAGADA
+                        </span>
+                        <p class="text-muted small mt-2 mb-0" id="bomba-texto">Sistema en espera.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-5" id="card-control-manual">
+                <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 text-center h-100">
+                    <h6 class="fw-semibold mb-1 small">
+                        <i class="bi bi-sliders me-1"></i> Control manual
+                    </h6>
+                    <p id="estadoManual" class="text-muted small mb-2">Estado: APAGADA</p>
+                    <div class="d-grid col-11 col-sm-10 mx-auto">
+                        <button id="btnBombaManual" class="btn btn-success fw-semibold py-2">
+                            <i class="bi bi-power me-1"></i> ENCENDER BOMBA
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div>
+                    <h6 class="fw-bold mb-0"><i class="bi bi-graph-up me-2"></i>Historial</h6>
+                    <small class="text-muted d-none d-sm-inline">Desliza horizontalmente para recorrer los
+                        registros</small>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <select id="filtroMes" class="form-select form-select-sm" style="width: auto;"
+                        aria-label="Seleccionar mes"></select>
+                    <select id="filtroDia" class="form-select form-select-sm" style="width: auto;"
+                        aria-label="Seleccionar día"></select>
+                    <button type="button" class="btn btn-sm btn-outline-success fw-semibold" id="btnVerDetalles"
+                        aria-expanded="false">
+                        <i class="bi bi-sliders2 me-1"></i>Ver más detalles
+                    </button>
+                </div>
+            </div>
+
+            <div id="graficoScrollContainer" style="width: 100%; overflow-x: auto; overflow-y: hidden;">
+                <div id="graficoInnerWrapper" style="height: 260px; min-width: 100%; position: relative;">
+                    <canvas id="humedadChart"></canvas>
+                </div>
+            </div>
+
+            <div id="panelDetalles" class="d-none mt-3 pt-3 border-top">
+                <div id="resumen-estadistico" class="mb-3"></div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+
+                    <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" id="btnVerDatos"
+                        aria-expanded="false">
+                        <i class="bi bi-table me-1"></i>Ver datos
+                    </button>
+                </div>
+
+                <div id="contenedorTablaDia" class="d-none">
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-hover align-middle text-center mb-0 small">
+                            <thead class="table-light sticky-top" id="tabla-header"></thead>
+                            <tbody id="tablaLecturas">
+                                <tr>
+                                    <td class="text-muted">Cargando lecturas...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal fade" id="wifiModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-router text-success me-2"></i>Cambiar red WiFi del equipo
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <form id="wifiForm">
+                    <div class="modal-body">
+                        <p class="small text-muted">
+                            Ingresa los datos de tu nueva red WiFi (2.4 GHz). Cuando el equipo recupere conexión o se
+                            conecte temporalmente, actualizará su red automáticamente.
+                        </p>
+                        <div class="mb-3">
+                            <label for="wifiSsid" class="form-label fw-semibold">Nombre de la red WiFi (SSID)</label>
+                            <input type="text" class="form-control" id="wifiSsid" required maxlength="63">
+                        </div>
+                        <div class="mb-2">
+                            <label for="wifiPassword" class="form-label fw-semibold">Contraseña WiFi</label>
+                            <input type="password" class="form-control" id="wifiPassword" required minlength="8"
+                                maxlength="63">
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success fw-semibold">Guardar red WiFi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
