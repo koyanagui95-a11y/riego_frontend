@@ -1,0 +1,58 @@
+.app-navbar {
+    background: linear-gradient(135deg, #146c43 0%, #198754 65%, #1e945d 100%);
+    box-shadow: 0 4px 16px rgba(20, 108, 67, 0.18);
+}
+
+.app-navbar .user-pill-btn {
+    background-color: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+    border-radius: 50rem;
+    padding: 0.32rem 0.75rem;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.app-navbar .user-pill-btn:hover,
+.app-navbar .user-pill-btn:focus,
+.app-navbar .user-pill-btn[aria-expanded="true"] {
+    background-color: rgba(255, 255, 255, 0.24);
+    border-color: rgba(255, 255, 255, 0.45);
+    color: #ffffff;
+}
+
+.app-navbar .dropdown-menu {
+    border-radius: 0.9rem;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+    padding: 0.35rem;
+}
+
+.app-navbar .dropdown-item {
+    border-radius: 0.55rem;
+    font-size: 0.9rem;
+}
+
+#humedadChart {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+@media (max-width: 576px) {
+    #cards-container .card {
+        padding: 0.85rem !important;
+    }
+
+    #cards-container h2,
+    #cards-container .display-6,
+    #cards-container .fs-2 {
+        font-size: 1.55rem !important;
+    }
+
+    #cards-container h6,
+    #cards-container .card-title {
+        font-size: 0.78rem !important;
+        margin-bottom: 0.35rem !important;
+    }
+}
